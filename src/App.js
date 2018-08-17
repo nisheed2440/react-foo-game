@@ -1,12 +1,13 @@
-import React, { Component, createRef, Fragment } from "react";
-import firebase from "firebase/app";
-import "firebase/firestore";
-import Modal from "react-modal";
-import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
-import "./App.css";
-import logo from "./logo.png";
-import config from "./config";
-Modal.setAppElement("#root");
+import React, { Component, createRef, Fragment } from 'react';
+import firebase from 'firebase/app';
+import 'firebase/firestore';
+import Modal from 'react-modal';
+import '../node_modules/bootstrap/dist/css/bootstrap.min.css';
+import './App.css';
+import logo from './logo.png';
+import config from './config';
+const vCard = require('vcf');
+Modal.setAppElement('#root');
 
 class App extends Component {
   constructor(props) {
@@ -17,48 +18,65 @@ class App extends Component {
     this.db.settings({ timestampsInSnapshots: true });
     this.state = {
       showError: false,
-      errorMsg: "",
+      errorMsg: '',
       showSuccess: false,
-      successMsg: "",
+      successMsg: '',
       modalIsOpen: false
     };
   }
+
   componentDidMount() {
     // Initialize the scanner
     let scanner = new window.Instascan.Scanner({
       video: this.videoRef.current
     });
 
-    scanner.addListener("scan", content => {
+    scanner.addListener('scan', content => {
       // Scanned content
-      console.log(content);
+      let parsedData = content;
+      let isVCard = false;
+
+      if (content.startsWith('BEGIN:VCARD')) {
+        isVCard = true;
+        parsedData = new vCard().parse(content).data;
+        Object.keys(parsedData).forEach(key => {
+          parsedData[key] = parsedData[key]._data;
+        });
+        parsedData['raw'] = content;
+      }
+
+      console.log(parsedData);
       this.setState({
         modalIsOpen: true
       });
       this.db
-        .collection("users")
-        .add({ data: content })
+        .collection('users')
+        .add({ data: parsedData })
         .then(docRef => {
           // Successful
-          console.log("Document written with ID: ", docRef.id);
+          console.log('Document written with ID: ', docRef.id);
           this.setState({
             showError: false,
-            errorMsg: "",
+            errorMsg: '',
             showSuccess: true,
-            successMsg: "Document written with ID: " + docRef.id,
+            successMsg: 'Connected to Quiz Portal!',
             modalIsOpen: true
           });
           // Update this to window.location.href
-          window.location.href = "https://goo.gl/forms/zVKEP439dQt3Ln163";
+          window.location.href = `https://docs.google.com/forms/d/e/1FAIpQLScTrv_HFyhoCPL4QEJgjeYXjgtDngxSwSypJ0jv_8w9gZSFcg/viewform?usp=pp_url&entry.1482898844=${
+            isVCard ? parsedData.fn : ''
+          }&entry.603592442=${isVCard ? parsedData.email : ''}&entry.77762339=${
+            isVCard ? parsedData.tel : ''
+          }&entry.650067583=${isVCard ? parsedData.org : ''}`;
         })
         .catch(error => {
           // Failed
-          console.error("Error adding document: ", error);
+          console.error('Error adding document: ', error);
           this.setState({
             showError: true,
-            errorMsg: "Error adding document",
+            errorMsg: 'Error adding document',
             showSuccess: false,
-            successMsg: "",
+            successMsg: '',
             modalIsOpen: true
           });
         });
@@ -70,12 +88,12 @@ class App extends Component {
           scanner.start(cameras[0]);
         } else {
           // Scanner Error
-          console.error("No cameras found.");
+          console.error('No cameras found.');
           this.setState({
             showError: true,
-            errorMsg: "No cameras found.",
+            errorMsg: 'No cameras found.',
             showSuccess: false,
-            successMsg: "",
+            successMsg: '',
             modalIsOpen: true
           });
         }
@@ -91,9 +109,9 @@ class App extends Component {
   }
   dismissModal = () => {
     this.setState({
-      errorMsg: "",
+      errorMsg: '',
       showError: false,
-      successMsg: "",
+      successMsg: '',
       showSuccess: false,
       modalIsOpen: false
     });
@@ -130,8 +148,8 @@ class App extends Component {
               padding: 30,
               maxHeight: 300,
               maxWidth: 300,
-              margin: "auto",
-              color: "#333"
+              margin: 'auto',
+              color: '#333'
             }
           }}
         >
@@ -139,7 +157,7 @@ class App extends Component {
           <div
             className="alert alert-success"
             role="alert"
-            style={{ display: this.state.showSuccess ? "block" : "none" }}
+            style={{ display: this.state.showSuccess ? 'block' : 'none' }}
           >
             {this.state.successMsg}
           </div>
@@ -148,31 +166,31 @@ class App extends Component {
           <div
             className="alert alert-danger"
             role="alert"
-            style={{ display: this.state.showError ? "block" : "none" }}
+            style={{ display: this.state.showError ? 'block' : 'none' }}
           >
             {this.state.errorMsg}
           </div>
           {!this.state.showError ? (
-            <div className="progress" style={{ margin: "40px 0" }}>
+            <div className="progress" style={{ margin: '40px 0' }}>
               <div
                 className="progress-bar progress-bar-striped progress-bar-animated"
                 role="progressbar"
                 aria-valuenow="100"
                 aria-valuemin="0"
                 aria-valuemax="100"
-                style={{ width: "100%" }}
+                style={{ width: '100%' }}
               />
             </div>
           ) : (
-            ""
+            ''
           )}
           {!this.state.showSuccess && !this.state.showError ? (
             <p>Saving Data...</p>
           ) : (
-            ""
+            ''
           )}
 
-          {this.state.showSuccess ? <p>Redirecting...</p> : ""}
+          {this.state.showSuccess ? <p>Redirecting...</p> : ''}
         </Modal>
       </Fragment>
     );
